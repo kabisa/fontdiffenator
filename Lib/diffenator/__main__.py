@@ -45,7 +45,9 @@ import logging
 from diffenator import CHOICES, __version__
 from diffenator.font import DFont, font_matcher
 from diffenator.diff import DiffFonts
+from diff import cbdt_diff_script
 import argparse
+import sys
 
 
 def main():
@@ -75,7 +77,8 @@ def main():
     parser.add_argument('-i', '--vf-instance',
                         default=None,
                         help='Set vf variations e.g "wght=400"')
-
+    parser.add_argument('-oi', '--output_images', action='store_true',
+                        help='Show differences in glyphs as png')
     parser.add_argument('--marks_thresh', type=int, default=0,
                         help="Ignore modified marks under this value")
     parser.add_argument('--mkmks_thresh', type=int, default=0,
@@ -103,26 +106,36 @@ def main():
             glyphs_thresh=args.glyphs_thresh,
             metrics_thresh=args.metrics_thresh,
             to_diff=args.to_diff,
-            render_diffs=args.render_diffs
+            output_images=args.output_images,
+            render_diffs=args.render_diffs,
     )
-    font_before = DFont(args.font_before)
-    font_after = DFont(args.font_after)
-    font_matcher(font_before, font_after, args.vf_instance)
+    try:
+        font_before = DFont(args.font_before)
+        font_after = DFont(args.font_after)
 
-    diff = DiffFonts(font_before, font_after, diff_options)
+        font_matcher(font_before, font_after, args.vf_instance)
 
-    if args.render_path:
-        diff.to_gifs(args.render_path, args.output_lines)
+        diff = DiffFonts(font_before, font_after, diff_options)
 
-    if args.markdown:
-        print(diff.to_md(args.output_lines))
-    elif args.html:
-        print(diff.to_html(args.output_lines, image_dir=args.render_path))
-    else:
-        print(diff.to_txt(args.output_lines))
+        if args.render_path:
+            diff.to_gifs(args.render_path, args.output_lines)
 
+        if args.markdown:
+            print(diff.to_md(args.output_lines))
+        elif args.html:
+            print(diff.to_html(args.output_lines, image_dir=args.render_path))
+        else:
+            print(diff.to_txt(args.output_lines))
+
+    except Exception as ex:
+        if "Font contains no outlines" == str(ex):
+            diff = cbdt_diff_script(args.font_before, args.font_after, diff_options)
+            print(f"New codepoints:\n{diff['new']}")
+            print(f"Missing codepoints:\n{diff['missing']}")
+            print(f"Modified glyphs:\n{diff['modified']}")
+        else:
+            sys.exit(ex)
 
 
 if __name__ == '__main__':
     main()
-

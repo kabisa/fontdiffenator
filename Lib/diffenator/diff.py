@@ -335,10 +335,10 @@ def cbdt_diff_script(font_before, font_after, diff_options,
                 os.mkdir(compare_directory)
             if image1 and image2:
                 with open(os.path.join(compare_directory, f'{key}_old.png'), 'wb') as f:
-                    image1 = image1.convert('RGB')
+                    image1 = image1.convert('RGBA')
                     image1.save(f, "PNG")
                 with open(os.path.join(compare_directory, f'{key}_new.png'), 'wb') as f:
-                    image2 = image2.convert('RGB')
+                    image2 = image2.convert('RGBA')
                     image2.save(f, "PNG")
                 image1.save(f"{compare_directory}/{key}.gif",
                             save_all=True,

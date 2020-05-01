@@ -77,8 +77,6 @@ def main():
     parser.add_argument('-i', '--vf-instance',
                         default=None,
                         help='Set vf variations e.g "wght=400"')
-    parser.add_argument('-oi', '--output_images', action='store_true',
-                        help='Show differences in glyphs as png')
     parser.add_argument('--marks_thresh', type=int, default=0,
                         help="Ignore modified marks under this value")
     parser.add_argument('--mkmks_thresh', type=int, default=0,
@@ -92,7 +90,7 @@ def main():
     parser.add_argument('-rd', '--render_diffs', action='store_true',
                         help=("Render glyphs with hb-view and compare "
                               "pixel diffs."))
-    parser.add_argument('-r', '--render-path',
+    parser.add_argument('-r', '--render_path',
                         help="Path to generate before and after gifs to.")
     args = parser.parse_args()
 
@@ -106,8 +104,8 @@ def main():
             glyphs_thresh=args.glyphs_thresh,
             metrics_thresh=args.metrics_thresh,
             to_diff=args.to_diff,
-            output_images=args.output_images,
             render_diffs=args.render_diffs,
+            render_path=args.render_path,
     )
     try:
         font_before = DFont(args.font_before)

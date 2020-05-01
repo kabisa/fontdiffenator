@@ -22,6 +22,7 @@ import os
 import time
 import logging
 from PIL import Image
+import imageio
 import contextlib
 import itertools
 import io
@@ -328,18 +329,26 @@ def cbdt_diff_script(font_before, font_after, diff_options,
 
         if not similar_img(image1, image2):
             modified.add(key)
-        if diff_options["output_images"]:
-            compare_directory = "./image_compare"
+        if diff_options["render_path"]:
+            compare_directory = diff_options["render_path"]
             if not os.path.isdir(compare_directory):
                 os.mkdir(compare_directory)
-            if image1:
+            if image1 and image2:
                 with open(os.path.join(compare_directory, f'{key}_old.png'), 'wb') as f:
-                    image1.save(f)
-            if image2:
+                    image1 = image1.convert('RGB')
+                    image1.save(f, "PNG")
                 with open(os.path.join(compare_directory, f'{key}_new.png'), 'wb') as f:
-                    image2.save(f)
+                    image2 = image2.convert('RGB')
+                    image2.save(f, "PNG")
+                image1.save(f"{compare_directory}/{key}.gif",
+                            save_all=True,
+                            append_images=[image2],
+                            duration=1000,
+                            loop=10000)
+                os.remove(f"./{compare_directory}/{key}_old.png")
+                os.remove(f"./{compare_directory}/{key}_new.png")
 
-    if diff_options["output_images"]:
+    if diff_options["render_path"]:
         print(f"images are stored in: {compare_directory}")
 
     glyphs_before_h = glyphs1

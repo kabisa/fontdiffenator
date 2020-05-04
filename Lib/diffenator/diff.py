@@ -309,8 +309,8 @@ def cbdt_diff_script(font_before, font_after, diff_options,
         read_cmap12(ttf, glyph_to_codepoint_map_2, codepoint_map_2)
         read_gsub(ttf, glyph_to_codepoint_map_2, codepoint_map_2)
 
-    glyphs1 = set(font1_cbdt.keys())
-    glyphs2 = set(font2_cbdt.keys())
+    glyphs1 = set(font1_cbdt)
+    glyphs2 = set(font2_cbdt)
 
     codepoints_set1 = set(codepoint_map_1.keys())
     codepoints_set2 = set(codepoint_map_2.keys())
@@ -320,10 +320,10 @@ def cbdt_diff_script(font_before, font_after, diff_options,
 
     modified = set()
 
-    all_codepoints = set(codepoint_map_1.keys()).union(codepoint_map_2.keys())
+    all_codepoints = set(codepoint_map_1) & set(codepoint_map_2)
     for key in all_codepoints:
-        glyph1 = codepoint_map_1[key] if key in codepoint_map_1 else None
-        glyph2 = codepoint_map_2[key] if key in codepoint_map_2 else None
+        glyph1 = codepoint_map_1.get(key)
+        glyph2 = codepoint_map_2.get(key)
         image1 = font1_cbdt[glyph1] if glyph1 and glyph1 in font1_cbdt else None
         image2 = font2_cbdt[glyph2] if glyph2 and glyph2 in font2_cbdt else None
 
@@ -512,7 +512,6 @@ def read_cbdt(ttf):
   glyph_to_image = {}
   for strike_data in cbdt.strikeData:
     for key, data in strike_data.items():
-      data.decompile
       glyph_to_image[key] = Image.open(io.BytesIO(data.imageData))
   return glyph_to_image
 
@@ -521,7 +520,7 @@ def similar_img(img1, img2):
     # return if images are the same with accepting some changes
     if img1 is None and img2 is None: return True
     if img1 is None or img2 is None: return False
-    if not img1.size == img2.size: return False
+    if img1.size != img2.size: return False
 
     pixels1 = rgba_map.get(img1.filename, img1.convert('L').getdata())
     pixels2 = rgba_map.get(img2.filename, img2.convert('L').getdata())

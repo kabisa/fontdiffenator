@@ -90,7 +90,7 @@ def main():
     parser.add_argument('-rd', '--render_diffs', action='store_true',
                         help=("Render glyphs with hb-view and compare "
                               "pixel diffs."))
-    parser.add_argument('-r', '--render_path',
+    parser.add_argument('-r', '--render-path',
                         help="Path to generate before and after gifs to.")
     args = parser.parse_args()
 

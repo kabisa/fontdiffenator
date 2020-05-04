@@ -42,6 +42,7 @@ diffenator /path/to/font_before.ttf /path/to/font_after.ttf -r /path/to/img_dir
 """
 from argparse import RawTextHelpFormatter
 import logging
+from fontTools.ttLib import TTFont
 from diffenator import CHOICES, __version__
 from diffenator.font import DFont, font_matcher
 from diffenator.diff import DiffFonts
@@ -107,7 +108,11 @@ def main():
             render_diffs=args.render_diffs,
             render_path=args.render_path,
     )
-    try:
+
+    tt_font_before = TTFont(args.font_before)
+    tt_font_after = TTFont(args.font_after)
+
+    if "glyf" in tt_font_before.keys():
         font_before = DFont(args.font_before)
         font_after = DFont(args.font_after)
 
@@ -125,7 +130,7 @@ def main():
         else:
             print(diff.to_txt(args.output_lines))
 
-    except Exception as ex:
+    else:
         if "Font contains no outlines" == str(ex):
             diff = cbdt_diff_script(args.font_before, args.font_after, diff_options)
             print(f"New codepoints:\n{diff['new']}")

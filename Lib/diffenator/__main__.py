@@ -44,9 +44,8 @@ from argparse import RawTextHelpFormatter
 import logging
 from fontTools.ttLib import TTFont
 from diffenator import CHOICES, __version__
-from diffenator.font import DFont, font_matcher
-from diffenator.diff import DiffFonts
-from diff import cbdt_diff_script
+from font import DFont, font_matcher
+from diff import DiffFonts, cbdt_diff_script
 import argparse
 import sys
 
@@ -112,32 +111,29 @@ def main():
     tt_font_before = TTFont(args.font_before)
     tt_font_after = TTFont(args.font_after)
 
-    if "glyf" in tt_font_before.keys():
-        font_before = DFont(args.font_before)
-        font_after = DFont(args.font_after)
+    # if "glyf" in tt_font_before.keys():
+    font_before = DFont(args.font_before)
+    font_after = DFont(args.font_after)
 
-        font_matcher(font_before, font_after, args.vf_instance)
+    font_matcher(font_before, font_after, args.vf_instance)
 
-        diff = DiffFonts(font_before, font_after, diff_options)
+    diff = DiffFonts(font_before, font_after, diff_options)
 
-        if args.render_path:
-            diff.to_gifs(args.render_path, args.output_lines)
+    if args.render_path:
+        diff.to_gifs(args.render_path, args.output_lines)
 
-        if args.markdown:
-            print(diff.to_md(args.output_lines))
-        elif args.html:
-            print(diff.to_html(args.output_lines, image_dir=args.render_path))
-        else:
-            print(diff.to_txt(args.output_lines))
-
+    if args.markdown:
+        print(diff.to_md(args.output_lines))
+    elif args.html:
+        print(diff.to_html(args.output_lines, image_dir=args.render_path))
     else:
-        if "Font contains no outlines" == str(ex):
-            diff = cbdt_diff_script(args.font_before, args.font_after, diff_options)
-            print(f"New codepoints:\n{diff['new']}")
-            print(f"Missing codepoints:\n{diff['missing']}")
-            print(f"Modified glyphs:\n{diff['modified']}")
-        else:
-            sys.exit(ex)
+        print(diff.to_txt(args.output_lines))
+
+    # else:
+    #     diff = cbdt_diff_script(args.font_before, args.font_after, diff_options)
+    #     print(f"New codepoints:\n{diff['new']}")
+    #     print(f"Missing codepoints:\n{diff['missing']}")
+    #     print(f"Modified glyphs:\n{diff['modified']}")
 
 
 if __name__ == '__main__':

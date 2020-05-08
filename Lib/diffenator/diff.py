@@ -69,7 +69,7 @@ class DiffFonts:
         to_diff=["*"],
         render_diffs=False,
     )
-    def __init__(self, diff_glyphs, font_after, settings=None):
+    def __init__(self, font_before, font_after, settings=None):
         self.font_before = font_before
         self.font_after = font_after
         self._data = collections.defaultdict(dict)
@@ -81,7 +81,10 @@ class DiffFonts:
                 self._settings[key] = settings[key]
 
         if "*" in self._settings["to_diff"]:
-            self.run_all_diffs()
+            if self.font_before.glyphs != None:
+                self.run_all_diffs()
+            else:
+                self.run_all_diffs(False)
         else:
             if "names" in self._settings["to_diff"]:
                 self.names()
@@ -98,14 +101,17 @@ class DiffFonts:
             if "mkmks" in self._settings["to_diff"]:
                 self.mkmks(self._settings["mkmks_thresh"])
 
-    def run_all_diffs(self):
+    def run_all_diffs(self, glyf_outline=True):
         self.names()
         self.attribs()
-        self.glyphs(self._settings["glyphs_thresh"])
-        self.kerns(self._settings["kerns_thresh"])
-        self.metrics(self._settings["metrics_thresh"])
-        self.marks(self._settings["marks_thresh"])
-        self.mkmks(self._settings["mkmks_thresh"])
+        if glyf_outline:
+            self.glyphs(self._settings["glyphs_thresh"])
+            self.kerns(self._settings["kerns_thresh"])
+            self.metrics(self._settings["metrics_thresh"])
+            self.marks(self._settings["marks_thresh"])
+            self.mkmks(self._settings["mkmks_thresh"])
+        # else:
+        #     self.glyphs(self._settings["glyphs_thresh"])
 
     def to_dict(self):
         serialised_data = self._serialise()

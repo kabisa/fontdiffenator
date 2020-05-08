@@ -58,7 +58,10 @@ class DFont(TTFont):
         self.ttfont = TTFont(self.path)
         self._src_ttfont = TTFont(self.path)
         self.glyphset = None
-        self.recalc_glyphset()
+        if "glyf" in self.ttfont:
+            self.recalc_glyphset()
+        else:
+            self.recalc_glyphset()
         self.axis_order = None
         self.instance_coordinates = self._get_dflt_instance_coordinates()
         self.instances_coordinates = self._get_instances_coordinates()
@@ -68,18 +71,21 @@ class DFont(TTFont):
         self.ftfont = freetype.Face(self.path)
         self.ftslot = self.ftfont.glyph
 
-        self.size = size
-        self.ftfont.set_char_size(self.size)
+        if "glyf" in self.ttfont:
+            self.size = size
+            self.ftfont.set_char_size(self.size)
 
         with open(self.path, 'rb') as fontfile:
             self._fontdata = fontfile.read()
         self.hbface = hb.Face.create(self._fontdata)
         self.hbfont = hb.Font.create(self.hbface)
 
-        self.hbfont.scale = (self.size, self.size)
+        if "glyf" in self.ttfont:
+            self.hbfont.scale = (self.size, self.size)
 
         if not lazy:
-            self.recalc_tables()
+            calc_glyfs = "glyf" in self.ttfont
+            self.recalc_tables(calc_glyfs)
 
     def _get_instances_coordinates(self):
         if self.is_variable:
@@ -95,6 +101,8 @@ class DFont(TTFont):
         return self.glyphset[name]
 
     def recalc_glyphset(self):
+        print(self.ttfont.keys())
+        exit(1)
         if not 'cmap' in self.ttfont.keys():
             self.glyphset = []
         inputs = InputGenerator(self).all_inputs()
@@ -152,17 +160,18 @@ class DFont(TTFont):
             # TODO (M Foley) add slnt axes
             self.set_variations(variations)
 
-    def recalc_tables(self):
+    def recalc_tables(self, calc_glyphs=True):
         """Recalculate DFont tables"""
-        self.recalc_glyphset()
-        anchors = DumpAnchors(self)
-        self.glyphs = dump_glyphs(self)
-        self.marks = anchors.marks_table
-        self.mkmks = anchors.mkmks_table
+        if calc_glyphs:
+            self.recalc_glyphset()
+            anchors = DumpAnchors(self)
+            self.glyphs = dump_glyphs(self)
+            self.marks = anchors.marks_table
+            self.mkmks = anchors.mkmks_table
+            self.metrics = dump_glyph_metrics(self)
         self.attribs = dump_attribs(self)
         self.names = dump_nametable(self)
         self.kerns = dump_kerning(self)
-        self.metrics = dump_glyph_metrics(self)
 
 
 class InputGenerator(HbInputGenerator):

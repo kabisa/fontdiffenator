@@ -58,10 +58,11 @@ class DFont(TTFont):
         self.path = path
         self.ttfont = TTFont(self.path)
 
-        has_glyf_table = self.ttfont.has_key("glyf")
-        if not has_glyf_table:
+        is_outline_font = self.ttfont.has_key("glyf") or self.ttfont.has_key("CFF ")
+        if not is_outline_font:
             # Create faux empty glyf table with empty glyphs to make
             # it a valid font, e.g. for old-style CBDT/CBLC fonts
+            logger.warning("No outlines present, treating {} as bitmap font".format(self.path))
             self.ttfont["glyf"] = newTable("glyf")
             self.ttfont["glyf"].glyphs = {}
             pen = TTGlyphPen({})

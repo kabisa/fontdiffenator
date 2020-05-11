@@ -27,7 +27,8 @@ CHOICES = [
     'attribs',
     'metrics',
     'glyphs',
-    'kerns'
+    'kerns',
+    'cbdt'
 ]
 
 logger = logging.getLogger("fontdiffenator")

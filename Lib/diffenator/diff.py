@@ -22,6 +22,7 @@ import os
 import time
 import logging
 from PIL import Image
+import io
 
 
 __all__ = ['DiffFonts', 'diff_metrics', 'diff_kerning',
@@ -54,13 +55,14 @@ class DiffFonts:
     font_after: DFont
     settings: dict
     """
-    
+
     SETTINGS = dict(
         glyphs_thresh=0,
         marks_thresh=0,
         mkmks_thresh=0,
         metrics_thresh=0,
         kerns_thresh=0,
+        cbdt_thresh=0,
         to_diff=["*"],
         render_diffs=False,
     )
@@ -92,6 +94,8 @@ class DiffFonts:
                 self.marks(self._settings["marks_thresh"])
             if "mkmks" in self._settings["to_diff"]:
                 self.mkmks(self._settings["mkmks_thresh"])
+            if "cbdt" in self._settings["to_diff"]:
+                self.cbdt(self._settings["cbdt_thresh"])
 
     def run_all_diffs(self):
         self.names()
@@ -101,6 +105,7 @@ class DiffFonts:
         self.metrics(self._settings["metrics_thresh"])
         self.marks(self._settings["marks_thresh"])
         self.mkmks(self._settings["mkmks_thresh"])
+        self.cbdt(self._settings["cbdt_thresh"])
 
     def to_dict(self):
         serialised_data = self._serialise()
@@ -198,6 +203,31 @@ class DiffFonts:
             name="mkmks",
             thresh=threshold
         )
+
+    def cbdt(self, threshold=None):
+        # TODO: instead of returning, make sure the list of
+        # CBDT glyphs that are different is empty when this
+        # is not a CBDT font
+        if not self.font_before.cbdt or not self.font_after.cbdt:
+            return
+
+        # TODO: abstract this to diff_cbdt_glyphs and call
+        # it from here
+
+        cbdt_before = read_cbdt(self.font_before.ttfont)
+        cbdt_after = read_cbdt(self.font_after.ttfont)
+
+        shared = set(cbdt_before.keys()) & set(cbdt_after.keys())
+
+        for k in shared:
+            # TODO: Do somethine like in diff_glyphs
+            # missing = DiffTable("glyphs missing", font_before, font_after, data=missing, renderable=True)
+            # missing.report_columns(["glyph", "area", "string"])
+            # missing.sort(key=lambda k: k["glyph"].name)
+
+            diff = _diff_images(cbdt_before[k], cbdt_after[k])
+            print (diff)
+
 
     def metrics(self, threshold=None):
         if not threshold:
@@ -328,7 +358,7 @@ def diff_glyphs(font_before, font_after,
     new = _subtract_items(glyphs_after_h, glyphs_before_h)
     modified = _modified_glyphs(glyphs_before_h, glyphs_after_h, thresh,
                                 scale_upms=scale_upms, render_diffs=render_diffs)
-    
+
     new = DiffTable("glyphs new", font_before, font_after, data=new, renderable=True)
     new.report_columns(["glyph", "area", "string"])
     new.sort(key=lambda k: k["glyph"].name)
@@ -498,14 +528,14 @@ def diff_kerning(font_before, font_after, thresh=2, scale_upms=True):
     new = DiffTable("kerns new", font_before, font_after, data=new, renderable=True)
     new.report_columns(["left", "right", "value", "string"])
     new.sort(key=lambda k: abs(k["value"]), reverse=True)
-    
+
     modified = DiffTable("kerns modified", font_before, font_after, data=modified, renderable=True)
     modified.report_columns(["left", "right", "diff", "string"])
     modified.sort(key=lambda k: abs(k["diff"]), reverse=True)
     return {
         'new': new,
         'missing': missing,
-        'modified': modified, 
+        'modified': modified,
     }
 
 
@@ -569,7 +599,7 @@ def diff_metrics(font_before, font_after, thresh=1, scale_upms=True):
     modified.report_columns(["glyph", "diff_adv"])
     modified.sort(key=lambda k: k["diff_adv"], reverse=True)
     return {
-            'modified': modified 
+            'modified': modified
             }
 
 
@@ -774,3 +804,10 @@ def _modified_marks(marks_before, marks_after, thresh=4,
             table.append(mark)
     return table
 
+def read_cbdt(ttfont):
+        cbdt = ttfont['CBDT']
+        cbdt_glyphs = {}
+        for strike_data in cbdt.strikeData:
+            for key, data in strike_data.items():
+                cbdt_glyphs[key] = Image.open(io.BytesIO(data.imageData))
+        return cbdt_glyphs

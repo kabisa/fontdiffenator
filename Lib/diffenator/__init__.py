@@ -134,9 +134,9 @@ class Tbl:
         ----------
         font: DFont
         font_position: str
-            Label indicating which font has been used. 
+            Label indicating which font has been used.
         dst: str
-            Path to output image. If no path is given, return in-memory 
+            Path to output image. If no path is given, return in-memory
         """
         # TODO (M Foley) better packaging for pycairo, freetype-py
         # and uharfbuzz.
@@ -198,7 +198,7 @@ class Tbl:
             char_info = buf.glyph_infos
             char_pos = buf.glyph_positions
             for info, pos in zip(char_info, char_pos):
-                gid = info.codepoint            
+                gid = info.codepoint
                 font.ftfont.load_glyph(gid, flags=6)
                 bitmap = font.ftslot.bitmap
 
@@ -292,6 +292,10 @@ class DiffTable(Tbl):
         self._font_b = font_b
 
     def to_gif(self, dst, padding_characters="", limit=800):
+
+        if not self._font_a.size or not self._font_b.size:
+            logger.info("Font can't be resized, skipping before and after gifs")
+            return
 
         tab_width = max(self._tab_width(self._font_a),
                         self._tab_width(self._font_b))

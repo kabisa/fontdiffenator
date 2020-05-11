@@ -81,7 +81,10 @@ class DFont(TTFont):
         self.ftslot = self.ftfont.glyph
 
         self.size = size
-        # self.ftfont.set_char_size(self.size)
+        if self.ftfont.is_scalable:
+            self.ftfont.set_char_size(self.size)
+        else:
+            self.size = False
 
         with open(self.path, 'rb') as fontfile:
             self._fontdata = fontfile.read()

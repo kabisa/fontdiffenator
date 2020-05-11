@@ -110,8 +110,8 @@ class DiffFonts:
             self.metrics(self._settings["metrics_thresh"])
             self.marks(self._settings["marks_thresh"])
             self.mkmks(self._settings["mkmks_thresh"])
-        # else:
-        #     self.glyphs(self._settings["glyphs_thresh"])
+        else:
+            self.glyphs(self._settings["glyphs_thresh"])
 
     def to_dict(self):
         serialised_data = self._serialise()

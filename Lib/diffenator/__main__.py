@@ -42,10 +42,12 @@ diffenator /path/to/font_before.ttf /path/to/font_after.ttf -r /path/to/img_dir
 """
 from argparse import RawTextHelpFormatter
 import logging
+from fontTools.ttLib import TTFont
 from diffenator import CHOICES, __version__
-from diffenator.font import DFont, font_matcher
-from diffenator.diff import DiffFonts
+from font import DFont, font_matcher
+from diff import DiffFonts, cbdt_diff_script
 import argparse
+import sys
 
 
 def main():
@@ -75,7 +77,6 @@ def main():
     parser.add_argument('-i', '--vf-instance',
                         default=None,
                         help='Set vf variations e.g "wght=400"')
-
     parser.add_argument('--marks_thresh', type=int, default=0,
                         help="Ignore modified marks under this value")
     parser.add_argument('--mkmks_thresh', type=int, default=0,
@@ -103,10 +104,17 @@ def main():
             glyphs_thresh=args.glyphs_thresh,
             metrics_thresh=args.metrics_thresh,
             to_diff=args.to_diff,
-            render_diffs=args.render_diffs
+            render_diffs=args.render_diffs,
+            render_path=args.render_path,
     )
+
+    tt_font_before = TTFont(args.font_before)
+    tt_font_after = TTFont(args.font_after)
+
+    # if "glyf" in tt_font_before.keys():
     font_before = DFont(args.font_before)
     font_after = DFont(args.font_after)
+
     font_matcher(font_before, font_after, args.vf_instance)
 
     diff = DiffFonts(font_before, font_after, diff_options)
@@ -121,8 +129,12 @@ def main():
     else:
         print(diff.to_txt(args.output_lines))
 
+    # else:
+    #     diff = cbdt_diff_script(args.font_before, args.font_after, diff_options)
+    #     print(f"New codepoints:\n{diff['new']}")
+    #     print(f"Missing codepoints:\n{diff['missing']}")
+    #     print(f"Modified glyphs:\n{diff['modified']}")
 
 
 if __name__ == '__main__':
     main()
-

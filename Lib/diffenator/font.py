@@ -14,6 +14,9 @@ from diffenator.dump import (
 from copy import copy
 import uharfbuzz as hb
 import freetype
+import contextlib
+import itertools
+from fontTools import ttLib
 from freetype.raw import *
 from freetype import (
         FT_PIXEL_MODE_MONO,
@@ -24,6 +27,8 @@ from freetype import (
         FT_Set_Var_Design_Coordinates
 )
 import sys
+from PIL import Image
+import io
 import logging
 try:
     # try and import unicodedata2 backport for py2.7.
@@ -58,7 +63,20 @@ class DFont(TTFont):
         self.ttfont = TTFont(self.path)
         self._src_ttfont = TTFont(self.path)
         self.glyphset = None
-        self.recalc_glyphset()
+
+        # TODO: If cbdt availible do else ...
+        if "glyf" in self.ttfont:
+            self.recalc_glyphset()
+
+        else:
+            codepoint_map = {}
+            glyph_to_codepoint_map = {}
+
+            font_cbdt = read_cbdt(self.ttfont)
+            read_cmap12(self.ttfont, glyph_to_codepoint_map, codepoint_map)
+            read_gsub(self.ttfont, glyph_to_codepoint_map, codepoint_map)
+
+            self.glyphset = set(font_cbdt)
         self.axis_order = None
         self.instance_coordinates = self._get_dflt_instance_coordinates()
         self.instances_coordinates = self._get_instances_coordinates()
@@ -68,18 +86,21 @@ class DFont(TTFont):
         self.ftfont = freetype.Face(self.path)
         self.ftslot = self.ftfont.glyph
 
-        self.size = size
-        self.ftfont.set_char_size(self.size)
+        if "glyf" in self.ttfont:
+            self.size = size
+            self.ftfont.set_char_size(self.size)
 
         with open(self.path, 'rb') as fontfile:
             self._fontdata = fontfile.read()
         self.hbface = hb.Face.create(self._fontdata)
         self.hbfont = hb.Font.create(self.hbface)
 
-        self.hbfont.scale = (self.size, self.size)
+        if "glyf" in self.ttfont:
+            self.hbfont.scale = (self.size, self.size)
 
         if not lazy:
-            self.recalc_tables()
+            calc_glyfs = "glyf" in self.ttfont
+            self.recalc_tables(calc_glyfs)
 
     def _get_instances_coordinates(self):
         if self.is_variable:
@@ -152,17 +173,18 @@ class DFont(TTFont):
             # TODO (M Foley) add slnt axes
             self.set_variations(variations)
 
-    def recalc_tables(self):
+    def recalc_tables(self, calc_glyphs=True):
         """Recalculate DFont tables"""
-        self.recalc_glyphset()
-        anchors = DumpAnchors(self)
-        self.glyphs = dump_glyphs(self)
-        self.marks = anchors.marks_table
-        self.mkmks = anchors.mkmks_table
+        if calc_glyphs:
+            self.recalc_glyphset()
+            anchors = DumpAnchors(self)
+            self.glyphs = dump_glyphs(self)
+            self.marks = anchors.marks_table
+            self.mkmks = anchors.mkmks_table
+            self.metrics = dump_glyph_metrics(self)
         self.attribs = dump_attribs(self)
         self.names = dump_nametable(self)
         self.kerns = dump_kerning(self)
-        self.metrics = dump_glyph_metrics(self)
 
 
 class InputGenerator(HbInputGenerator):
@@ -274,4 +296,91 @@ def font_matcher(font_before, font_after, axes=None):
                       in axes.split(", ")}
         font_before.set_variations(variations)
         font_after.set_variations(variations)
+
+
+def add_gsub_ligature_subtable(subtable, glyph_to_codepoint_map, codepoint_map):
+    for name, ligatures in subtable.ligatures.items():
+        for ligature in ligatures:
+            glyph_names = [name] + ligature.Component
+            codepoints = [glyph_to_codepoint_map[x] for x in glyph_names]
+            codepoint_map[codepoint_to_string(codepoints)] = ligature.LigGlyph
+
+
+def to_hex_str(value):
+    """Converts given int value to hex without the 0x prefix"""
+    return format(value, 'X')
+
+
+def codepoint_to_string(codepoints):
+    """Converts a list of codepoints into a string separated with space."""
+    return '_'.join([to_hex_str(x) for x in codepoints])
+
+
+def read_cbdt(ttf):
+        cbdt = ttf['CBDT']
+        glyph_to_image = {}
+        for strike_data in cbdt.strikeData:
+            for key, data in strike_data.items():
+                glyph_to_image[key] = Image.open(io.BytesIO(data.imageData))
+        return glyph_to_image
+
+
+def read_cmap12(ttf, glyph_to_codepoint_map, codepoint_map):
+    cmap = ttf['cmap']
+    for table in cmap.tables:
+        if table.format == 12 and table.platformID == 3 and table.platEncID == 10:
+            for codepoint, glyph_name in table.cmap.items():
+                glyph_to_codepoint_map[glyph_name] = codepoint
+                codepoint_map[codepoint_to_string([codepoint])] = glyph_name
+                # self.update_emoji_data([codepoint], glyph_name)
+            return table
+    raise ValueError("Font doesn't contain cmap with format:12, platformID:3 and platEncID:10")
+
+def get_substitutions(lookup_list, index):
+    result = []
+    for x in lookup_list.Lookup[index].SubTable:
+        for input, output in x.mapping.items():
+            result.append({"input": input, "output": output})
+    return result
+
+def add_gsub_context_subtable(subtable, lookup_list, glyph_to_codepoint_map, codepoint_map):
+    for sub_class_set in subtable.SubClassSet:
+        if sub_class_set:
+            for sub_class_rule in sub_class_set.SubClassRule:
+                subs_list = len(sub_class_rule.SubstLookupRecord) * [None]
+                for record in sub_class_rule.SubstLookupRecord:
+                    subs_list[record.SequenceIndex] = get_substitutions(lookup_list,
+                                                                        record.LookupListIndex)
+                combinations = list(itertools.product(*subs_list))
+                for seq in combinations:
+                    glyph_names = [x["input"] for x in seq]
+                    codepoints = [glyph_to_codepoint_map[x] for x in glyph_names]
+                    outputs = [x["output"] for x in seq if x["output"]]
+                    nonempty_outputs = list(filter(lambda x: x.strip() , outputs))
+                    if len(nonempty_outputs) == 0:
+                        print("Warning: no output glyph is set for " + str(glyph_names))
+                        continue
+                    elif len(nonempty_outputs) > 1:
+                        print(
+                            "Warning: multiple glyph is set for "
+                                + str(glyph_names) + ", will use the first one")
+                    glyph = nonempty_outputs[0]
+                    codepoint_map[codepoint_to_string(codepoints)] = glyph
+
+def read_gsub(ttf, glyph_to_codepoint_map, codepoint_map):
+    gsub = ttf['GSUB']
+    ligature_subtables = []
+    context_subtables = []
+    # this code is font dependent, implementing all gsub rules is out of scope of EmojiCompat
+    # and would be expensive with little value
+    for lookup in gsub.table.LookupList.Lookup:
+        for subtable in lookup.SubTable:
+            if subtable.LookupType == 5:
+                context_subtables.append(subtable)
+            elif subtable.LookupType == 4:
+                ligature_subtables.append(subtable)
+    for subtable in context_subtables:
+        add_gsub_context_subtable(subtable, gsub.table.LookupList, glyph_to_codepoint_map, codepoint_map)
+    for subtable in ligature_subtables:
+        add_gsub_ligature_subtable(subtable, glyph_to_codepoint_map, codepoint_map)
 

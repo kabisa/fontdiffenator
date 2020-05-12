@@ -211,22 +211,7 @@ class DiffFonts:
         if not self.font_before.cbdt or not self.font_after.cbdt:
             return
 
-        # TODO: abstract this to diff_cbdt_glyphs and call
-        # it from here
-
-        cbdt_before = read_cbdt(self.font_before.ttfont)
-        cbdt_after = read_cbdt(self.font_after.ttfont)
-
-        shared = set(cbdt_before.keys()) & set(cbdt_after.keys())
-
-        for k in shared:
-            # TODO: Do somethine like in diff_glyphs
-            # missing = DiffTable("glyphs missing", font_before, font_after, data=missing, renderable=True)
-            # missing.report_columns(["glyph", "area", "string"])
-            # missing.sort(key=lambda k: k["glyph"].name)
-
-            diff = _diff_images(cbdt_before[k], cbdt_after[k])
-            print (diff)
+        self._data["cbdt"] = diff_cbdt_glyphs(self.font_before, self.font_after, threshold)
 
 
     def metrics(self, threshold=None):
@@ -767,9 +752,42 @@ def diff_marks(font_before, font_after, marks_before, marks_after,
                          renderable=True)
     modified.report_columns(["base_glyph", "mark_glyph", "diff_x", "diff_y"])
     modified.sort(key=lambda k: abs(k["diff_x"]) + abs(k["diff_y"]), reverse=True)
+
     return {
         "new": new,
         "missing": missing,
+        "modified": modified,
+    }
+
+
+@timer
+def diff_cbdt_glyphs(font_before, font_after, thresh=4):
+
+    # TODO: Should be merged or used as set
+    glyphs_before_h = {r['glyph'].key: r["string"] for r in font_before.glyphs}
+
+    cbdt_before = read_cbdt(font_before.ttfont)
+    cbdt_after = read_cbdt(font_after.ttfont)
+
+    # print(set(cbdt_before).difference(set(glyphs_before_h)))
+
+    shared = set(cbdt_before) & set(cbdt_after)
+
+    modified = []
+    for k in shared:
+        print(type(k))
+        modified_glyph = {}
+        modified_glyph["glyph"] = k
+        modified_glyph["string"] = glyphs_before_h[k]
+        modified_glyph["diff"] = _diff_images(cbdt_before[k], cbdt_after[k])
+        if modified_glyph["diff"] > thresh:
+            modified.append(modified_glyph)
+
+    modified = DiffTable("cbdt glyphs modified", font_before, font_after, data=modified, renderable=True)
+    modified.report_columns(["glyph", "diff", "string"])
+    modified.sort(key=lambda k: abs(k["diff"]), reverse=True)
+
+    return {
         "modified": modified,
     }
 
@@ -803,6 +821,7 @@ def _modified_marks(marks_before, marks_after, thresh=4,
                 mark.pop(pos)
             table.append(mark)
     return table
+
 
 def read_cbdt(ttfont):
         cbdt = ttfont['CBDT']

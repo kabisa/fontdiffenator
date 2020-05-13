@@ -204,11 +204,12 @@ class DiffFonts:
         )
 
     def cbdt(self, threshold=None):
-        if not self.font_before.cbdt or not self.font_after.cbdt:
-            return
-
-        self._data["cbdt"] = diff_cbdt_glyphs(self.font_before, self.font_after, threshold)
-
+        if not threshold:
+            threshold = self._settings["cbdt_thresh"]
+        self._data["cbdt"] = diff_cbdt_glyphs(
+            self.font_before, self.font_after,
+            thresh=threshold
+        )
 
     def metrics(self, threshold=None):
         if not threshold:
@@ -756,30 +757,6 @@ def diff_marks(font_before, font_after, marks_before, marks_after,
     }
 
 
-@timer
-def diff_cbdt_glyphs(font_before, font_after, thresh=4):
-    glyphs_before_h = {str(r['glyph']): r["string"] for r in font_before.glyphs}
-    cbdt_before = read_cbdt(font_before.ttfont)
-    cbdt_after = read_cbdt(font_after.ttfont)
-    modified = []
-    for k in set(cbdt_before) & set(cbdt_after):
-        diff = _diff_images(cbdt_before[k], cbdt_after[k])
-        if diff > thresh:
-            modified.append({
-                "glyph": k,
-                "string": glyphs_before_h[k],
-                "diff": diff
-            })
-
-    modified = DiffTable("cbdt glyphs modified", font_before, font_after, data=modified, renderable=True)
-    modified.report_columns(["glyph", "diff", "string"])
-    modified.sort(key=lambda k: abs(k["diff"]), reverse=True)
-
-    return {
-        "modified": modified,
-    }
-
-
 def _modified_marks(marks_before, marks_after, thresh=4,
         upm_before=None, upm_after=None, scale_upms=True):
 
@@ -811,10 +788,42 @@ def _modified_marks(marks_before, marks_after, thresh=4,
     return table
 
 
+@timer
+def diff_cbdt_glyphs(font_before, font_after, thresh=4):
+    cbdt_before = read_cbdt(font_before.ttfont)
+    cbdt_after = read_cbdt(font_after.ttfont)
+
+    chars_before = {r["string"]: str(r["glyph"]) for r in font_before.glyphs}
+    chars_after = {r["string"]: str(r["glyph"]) for r in font_after.glyphs}
+
+    modified = []
+    for char in set(chars_before) & set(chars_after):
+        glyph_name_before = chars_before[char]
+        glyph_name_after = chars_after[char]
+        if glyph_name_before in cbdt_before and glyph_name_after in cbdt_after:
+            diff = _diff_images(cbdt_before[glyph_name_before], cbdt_after[glyph_name_after])
+            if diff > thresh:
+                modified.append({
+                    "glyph before": glyph_name_before,
+                    "glyph after": glyph_name_after,
+                    "string": char,
+                    "diff": diff
+                })
+
+    modified = DiffTable("cbdt glyphs modified", font_before, font_after, data=modified, renderable=True)
+    modified.report_columns(["glyph before", "glyph after", "diff", "string"])
+    modified.sort(key=lambda k: abs(k["diff"]), reverse=True)
+
+    return {
+        "modified": modified
+    }
+
+
 def read_cbdt(ttfont):
-        cbdt = ttfont['CBDT']
-        cbdt_glyphs = {}
+    cbdt_glyphs = {}
+    if ttfont.has_key("CBDT"):
+        cbdt = ttfont["CBDT"]
         for strike_data in cbdt.strikeData:
             for key, data in strike_data.items():
                 cbdt_glyphs[key] = Image.open(io.BytesIO(data.imageData))
-        return cbdt_glyphs
+    return cbdt_glyphs

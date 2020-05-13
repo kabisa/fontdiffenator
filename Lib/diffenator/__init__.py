@@ -6,14 +6,11 @@ if sys.version_info[0] < 3 and sys.version_info[1] < 6:
     raise ImportError("Visualize module requires Python3.6+!")
 from array import array
 from PIL import Image
-from ctypes import cast, memmove, CDLL, c_void_p, c_int
-from sys import byteorder
 from cairo import Context, ImageSurface, FORMAT_A8, FORMAT_ARGB32
 from freetype.raw import *
+from diffenator.diff import read_cbdt
 import uharfbuzz as hb
 import os
-import shutil
-import tempfile
 import logging
 try:
     from StringIO import StringIO

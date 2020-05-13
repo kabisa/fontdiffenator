@@ -1,4 +1,6 @@
 __version__ = "0.9.1"
+
+import io
 import sys
 if sys.version_info[0] < 3 and sys.version_info[1] < 6:
     raise ImportError("Visualize module requires Python3.6+!")
@@ -295,7 +297,32 @@ class DiffTable(Tbl):
     def to_gif(self, dst, padding_characters="", limit=800):
 
         if not self._font_a.size or not self._font_b.size:
-            if not self._font_a.cbdt or not self._font_b.cbdt:
+            if "cbdt" in dst:
+                font_a_images = read_cbdt(self._font_a.ttfont)
+                font_b_images = read_cbdt(self._font_b.ttfont)
+
+                for element in self._data:
+                    key = element["glyph"]
+                    dst = dst.replace("cbdt_glyphs_modified.gif", "")
+
+                    with open(f'{dst}{key}_old.png', 'wb') as f:
+                        image1 = font_a_images[key].convert('RGBA')
+                        image1.save(f, "PNG")
+                    with open(f'{dst}{key}_new.png', 'wb') as f:
+                        image2 = font_b_images[key].convert('RGBA')
+                        image2.save(f, "PNG")
+
+                    image1.save(f"{dst}{key}.gif",
+                            save_all=True,
+                            append_images=[image2],
+                            duration=1000,
+                            loop=10000)
+                    os.remove(f"{dst}{key}_old.png")
+                    os.remove(f"{dst}{key}_new.png")
+
+                print(f"images are stored in: {dst}")
+
+            else:
                 logger.info("Font can't be resized, skipping before and after gifs")
                 return
 
@@ -486,4 +513,10 @@ class HTMLFormatter(Formatter):
     def img(self, path):
         self._text.append("<img src='%s'>" % path)
 
-
+def read_cbdt(ttfont):
+    cbdt = ttfont['CBDT']
+    cbdt_glyphs = {}
+    for strike_data in cbdt.strikeData:
+        for key, data in strike_data.items():
+            cbdt_glyphs[key] = Image.open(io.BytesIO(data.imageData))
+    return cbdt_glyphs

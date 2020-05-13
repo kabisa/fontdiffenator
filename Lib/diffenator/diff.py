@@ -17,7 +17,6 @@ Module to diff fonts.
 from __future__ import print_function
 import collections
 from diffenator import DiffTable, TXTFormatter, MDFormatter, HTMLFormatter
-import functools
 import os
 import time
 import logging
@@ -205,9 +204,6 @@ class DiffFonts:
         )
 
     def cbdt(self, threshold=None):
-        # TODO: instead of returning, make sure the list of
-        # CBDT glyphs that are different is empty when this
-        # is not a CBDT font
         if not self.font_before.cbdt or not self.font_after.cbdt:
             return
 

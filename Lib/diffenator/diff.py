@@ -21,7 +21,7 @@ import os
 import time
 import logging
 from PIL import Image
-import io
+from . import read_cbdt
 
 
 __all__ = ['DiffFonts', 'diff_metrics', 'diff_kerning',
@@ -818,12 +818,3 @@ def diff_cbdt_glyphs(font_before, font_after, thresh=4):
         "modified": modified
     }
 
-
-def read_cbdt(ttfont):
-    cbdt_glyphs = {}
-    if ttfont.has_key("CBDT"):
-        cbdt = ttfont["CBDT"]
-        for strike_data in cbdt.strikeData:
-            for key, data in strike_data.items():
-                cbdt_glyphs[key] = Image.open(io.BytesIO(data.imageData)).convert("RGBA")
-    return cbdt_glyphs

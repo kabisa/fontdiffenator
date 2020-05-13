@@ -8,7 +8,6 @@ from array import array
 from PIL import Image
 from cairo import Context, ImageSurface, FORMAT_A8, FORMAT_ARGB32
 from freetype.raw import *
-from diffenator.diff import read_cbdt
 import uharfbuzz as hb
 import os
 import logging
@@ -513,9 +512,10 @@ class HTMLFormatter(Formatter):
         self._text.append("<img src='%s'>" % path)
 
 def read_cbdt(ttfont):
-    cbdt = ttfont['CBDT']
     cbdt_glyphs = {}
-    for strike_data in cbdt.strikeData:
-        for key, data in strike_data.items():
-            cbdt_glyphs[key] = Image.open(io.BytesIO(data.imageData))
+    if ttfont.has_key("CBDT"):
+        cbdt = ttfont["CBDT"]
+        for strike_data in cbdt.strikeData:
+            for key, data in strike_data.items():
+                cbdt_glyphs[key] = Image.open(io.BytesIO(data.imageData)).convert("RGBA")
     return cbdt_glyphs

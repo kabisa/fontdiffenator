@@ -295,35 +295,37 @@ class DiffTable(Tbl):
         self._font_b = font_b
 
     def to_gif(self, dst, padding_characters="", limit=800):
-
         if not self._font_a.size or not self._font_b.size:
             if "cbdt" in dst:
+                dstDir = dst.replace("cbdt_glyphs_modified.gif", "")
+
                 font_a_images = read_cbdt(self._font_a.ttfont)
                 font_b_images = read_cbdt(self._font_b.ttfont)
 
                 for element in self._data:
-                    key = element["glyph"]
-                    dst = dst.replace("cbdt_glyphs_modified.gif", "")
+                    key_before = element["glyph before"]
+                    key_after = element["glyph after"]
 
-                    with open(f'{dst}{key}_old.png', 'wb') as f:
-                        image1 = font_a_images[key].convert('RGBA')
-                        image1.save(f, "PNG")
-                    with open(f'{dst}{key}_new.png', 'wb') as f:
-                        image2 = font_b_images[key].convert('RGBA')
+                    with open(f'{dstDir}{key_before}_old.png', 'wb') as f:
+                        image1 = font_a_images[key_before].convert("RGBA")
+                        font_a_images[key_before].save(f, "PNG")
+                    with open(f'{dstDir}{key_after}_new.png', 'wb') as f:
+                        image2 = font_b_images[key_after].convert("RGBA")
                         image2.save(f, "PNG")
 
-                    image1.save(f"{dst}{key}.gif",
+                    image1.save(f"{dstDir}{key_before}.gif",
                             save_all=True,
                             append_images=[image2],
                             duration=1000,
                             loop=10000)
-                    os.remove(f"{dst}{key}_old.png")
-                    os.remove(f"{dst}{key}_new.png")
+                    os.remove(f"{dstDir}{key_before}_old.png")
+                    os.remove(f"{dstDir}{key_after}_new.png")
 
-                print(f"images are stored in: {dst}")
+                logger.info(f"images are stored in: {dstDir}")
+                return
 
             else:
-                logger.info("Font can't be resized, skipping before and after gifs")
+                logger.info(f"Font can't be resized, skipping {dst.split('/')[-1]}")
                 return
 
         tab_width = max(self._tab_width(self._font_a),

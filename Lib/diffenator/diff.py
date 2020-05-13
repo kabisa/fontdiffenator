@@ -825,5 +825,5 @@ def read_cbdt(ttfont):
         cbdt = ttfont["CBDT"]
         for strike_data in cbdt.strikeData:
             for key, data in strike_data.items():
-                cbdt_glyphs[key] = Image.open(io.BytesIO(data.imageData))
+                cbdt_glyphs[key] = Image.open(io.BytesIO(data.imageData)).convert("RGBA")
     return cbdt_glyphs

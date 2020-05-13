@@ -295,8 +295,9 @@ class DiffTable(Tbl):
     def to_gif(self, dst, padding_characters="", limit=800):
 
         if not self._font_a.size or not self._font_b.size:
-            logger.info("Font can't be resized, skipping before and after gifs")
-            return
+            if not self._font_a.cbdt or not self._font_b.cbdt:
+                logger.info("Font can't be resized, skipping before and after gifs")
+                return
 
         tab_width = max(self._tab_width(self._font_a),
                         self._tab_width(self._font_b))

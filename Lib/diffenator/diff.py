@@ -791,21 +791,28 @@ def _modified_marks(marks_before, marks_after, thresh=4,
 
 @timer
 def diff_cbdt_glyphs(font_before, font_after, thresh=4):
-    glyphs_before_h = {str(r['glyph']): r["string"] for r in font_before.glyphs}
     cbdt_before = read_cbdt(font_before.ttfont)
     cbdt_after = read_cbdt(font_after.ttfont)
+
+    chars_before = {r["string"]: str(r["glyph"]) for r in font_before.glyphs}
+    chars_after = {r["string"]: str(r["glyph"]) for r in font_after.glyphs}
+
     modified = []
-    for k in set(cbdt_before) & set(cbdt_after):
-        diff = _diff_images(cbdt_before[k], cbdt_after[k])
-        if diff > thresh:
-            modified.append({
-                "glyph": k,
-                "string": glyphs_before_h[k],
-                "diff": diff
-            })
+    for char in set(chars_before) & set(chars_after):
+        glyph_name_before = chars_before[char]
+        glyph_name_after = chars_after[char]
+        if glyph_name_before in cbdt_before and glyph_name_after in cbdt_after:
+            diff = _diff_images(cbdt_before[glyph_name_before], cbdt_after[glyph_name_after])
+            if diff > thresh:
+                modified.append({
+                    "glyph before": glyph_name_before,
+                    "glyph after": glyph_name_after,
+                    "string": char,
+                    "diff": diff
+                })
 
     modified = DiffTable("cbdt glyphs modified", font_before, font_after, data=modified, renderable=True)
-    modified.report_columns(["glyph", "diff", "string"])
+    modified.report_columns(["glyph before", "glyph after", "diff", "string"])
     modified.sort(key=lambda k: abs(k["diff"]), reverse=True)
 
     return {

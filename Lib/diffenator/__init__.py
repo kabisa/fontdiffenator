@@ -291,29 +291,28 @@ class DiffTable(Tbl):
         self._font_b = font_b
 
     def to_gif(self, dst, padding_characters="", limit=800):
-        if not self._font_a.size or not self._font_b.size:
-            if "cbdt" in dst:
-                dstDir = dst.replace("cbdt_glyphs_modified.gif", "")
+        if (not self._font_a.size or not self._font_b.size) and ("cbdt" in dst):
+            dstDir = dst.replace("cbdt_glyphs_modified.gif", "")
 
-                font_a_images = read_cbdt(self._font_a.ttfont)
-                font_b_images = read_cbdt(self._font_b.ttfont)
+            font_a_images = read_cbdt(self._font_a.ttfont)
+            font_b_images = read_cbdt(self._font_b.ttfont)
 
-                for element in self._data:
-                    key_before = element["glyph before"]
-                    key_after = element["glyph after"]
+            for element in self._data:
+                key_before = element["glyph before"]
+                key_after = element["glyph after"]
 
-                    font_a_images[key_before].save(f"{dstDir}{key_before}.gif",
-                                                   save_all=True,
-                                                   append_images=[font_b_images[key_after]],
-                                                   duration=1000,
-                                                   loop=10000)
+                font_a_images[key_before].save(f"{dstDir}{key_before}.gif",
+                                               save_all=True,
+                                               append_images=[font_b_images[key_after]],
+                                               duration=1000,
+                                               loop=10000)
 
-                logger.info(f"images are stored in: {dstDir}")
-                return
+            logger.info(f"images are stored in: {dstDir}")
+            return
 
-            else:
-                logger.info(f"Font can't be resized, skipping {dst.split('/')[-1]}")
-                return
+        elif not self._font_a.size or not self._font_b.size:
+            logger.info(f"Font can't be resized, skipping {dst.split('/')[-1]}")
+            return
 
         tab_width = max(self._tab_width(self._font_a),
                         self._tab_width(self._font_b))

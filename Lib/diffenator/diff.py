@@ -817,4 +817,3 @@ def diff_cbdt_glyphs(font_before, font_after, thresh=4):
     return {
         "modified": modified
     }
-

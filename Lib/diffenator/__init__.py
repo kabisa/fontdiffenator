@@ -297,16 +297,23 @@ class DiffTable(Tbl):
             key_before = element["glyph before"]
             key_after = element["glyph after"]
 
+            image_1 = font_a_images[key_before]
+            image_1_gif = Image.new('RGBA', image_1.size, (255, 255, 255))
+            image_1_gif.paste(image_1, image_1)
+            image_1_gif = image_1_gif.convert('RGB').convert('P', palette=Image.ADAPTIVE)
+
+            image_2 = font_b_images[key_after]
+            image_2_gif = Image.new('RGBA', image_2.size, (255, 255, 255))
+            image_2_gif.paste(image_2, image_2)
+            image_2_gif = image_2_gif.convert('RGB').convert('P', palette=Image.ADAPTIVE)
+
             img_path = os.path.join(dst, f"{key_before}.gif")
-            font_a_images[key_before].save(img_path,
-                                           save_all=True,
-                                           append_images=[font_b_images[key_after]],
-                                           duration=1000,
-                                           loop=10000)
-
-        logger.info(f"images are stored in: {dst}")
-        return
-
+            image_1_gif.save(img_path,
+                             save_all=True,
+                             append_images=[image_2_gif],
+                             duration=1000,
+                             loop=0
+            )
 
     def to_gif(self, dst, padding_characters="", limit=800):
         if not self._font_a.size or not self._font_b.size:
@@ -328,8 +335,8 @@ class DiffTable(Tbl):
             dst,
             save_all=True,
             append_images=[img_b],
-            loop=10000,
-            duration=1000
+            duration=1000,
+            loop=0
         )
 
 

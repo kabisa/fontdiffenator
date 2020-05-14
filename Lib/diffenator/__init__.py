@@ -302,20 +302,11 @@ class DiffTable(Tbl):
                     key_before = element["glyph before"]
                     key_after = element["glyph after"]
 
-                    with open(f'{dstDir}{key_before}_old.png', 'wb') as f:
-                        image1 = font_a_images[key_before].convert("RGBA")
-                        font_a_images[key_before].save(f, "PNG")
-                    with open(f'{dstDir}{key_after}_new.png', 'wb') as f:
-                        image2 = font_b_images[key_after].convert("RGBA")
-                        image2.save(f, "PNG")
-
-                    image1.save(f"{dstDir}{key_before}.gif",
-                            save_all=True,
-                            append_images=[image2],
-                            duration=1000,
-                            loop=10000)
-                    os.remove(f"{dstDir}{key_before}_old.png")
-                    os.remove(f"{dstDir}{key_after}_new.png")
+                    font_a_images[key_before].save(f"{dstDir}{key_before}.gif",
+                                                   save_all=True,
+                                                   append_images=[font_b_images[key_after].convert("RGBA")],
+                                                   duration=1000,
+                                                   loop=10000)
 
                 logger.info(f"images are stored in: {dstDir}")
                 return

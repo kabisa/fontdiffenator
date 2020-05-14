@@ -311,7 +311,7 @@ class DiffTable(Tbl):
             return
 
         elif not self._font_a.size or not self._font_b.size:
-            logger.info(f"Font can't be resized, skipping {dst.split('/')[-1]}")
+            logger.info(f"Font can't be resized, can’t generate {dst.split('/')[-1]}")
             return
 
         tab_width = max(self._tab_width(self._font_a),

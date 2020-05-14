@@ -290,21 +290,22 @@ class DiffTable(Tbl):
         self._font_b = font_b
 
     def to_cbdt_gif(self, dst):
-            font_a_images = read_cbdt(self._font_a.ttfont)
-            font_b_images = read_cbdt(self._font_b.ttfont)
+        font_a_images = read_cbdt(self._font_a.ttfont)
+        font_b_images = read_cbdt(self._font_b.ttfont)
 
-            for element in self._data:
-                key_before = element["glyph before"]
-                key_after = element["glyph after"]
+        for element in self._data:
+            key_before = element["glyph before"]
+            key_after = element["glyph after"]
 
-                font_a_images[key_before].save(f"{dst}{key_before}.gif",
-                                               save_all=True,
-                                               append_images=[font_b_images[key_after]],
-                                               duration=1000,
-                                               loop=10000)
+            img_path = os.path.join(dst, f"{key_before}.gif")
+            font_a_images[key_before].save(img_path,
+                                           save_all=True,
+                                           append_images=[font_b_images[key_after]],
+                                           duration=1000,
+                                           loop=10000)
 
-            logger.info(f"images are stored in: {dst}")
-            return
+        logger.info(f"images are stored in: {dst}")
+        return
 
 
     def to_gif(self, dst, padding_characters="", limit=800):

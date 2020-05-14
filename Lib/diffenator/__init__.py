@@ -304,7 +304,7 @@ class DiffTable(Tbl):
 
                     font_a_images[key_before].save(f"{dstDir}{key_before}.gif",
                                                    save_all=True,
-                                                   append_images=[font_b_images[key_after].convert("RGBA")],
+                                                   append_images=[font_b_images[key_after]],
                                                    duration=1000,
                                                    loop=10000)
 

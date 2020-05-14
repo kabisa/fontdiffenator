@@ -117,15 +117,18 @@ class DiffFonts:
 
         for table in self._data:
             for subtable in self._data[table]:
-                _table = self._data[table][subtable]
-                if not _table.renderable or len(_table) < 1:
-                    continue
-                filename = _table.table_name.replace(" ", "_") + ".gif"
-                img_path = os.path.join(dst, filename)
-                if table == "metrics":
-                    _table.to_gif(img_path, padding_characters="II", limit=limit)
+                if self._data[table] == "cbdt":
+                    _table.to_cbdt_gif(dst)
                 else:
-                    _table.to_gif(img_path, limit=limit)
+                    _table = self._data[table][subtable]
+                    if not _table.renderable or len(_table) < 1:
+                        continue
+                    filename = _table.table_name.replace(" ", "_") + ".gif"
+                    img_path = os.path.join(dst, filename)
+                    if table == "metrics":
+                        _table.to_gif(img_path, padding_characters="II", limit=limit)
+                    else:
+                        _table.to_gif(img_path, limit=limit)
 
     def _to_report(self, limit=50, dst=None, r_type="txt", image_dir=None):
         """Output before and after report"""

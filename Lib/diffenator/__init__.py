@@ -283,17 +283,13 @@ def _make_image_surface(bitmap, copy=True):
 
 
 class DiffTable(Tbl):
-
     def __init__(self, table_name, font_a, font_b,
                  data=None, renderable=False):
         super(DiffTable, self).__init__(table_name, data, renderable=renderable)
         self._font_a = font_a
         self._font_b = font_b
 
-    def to_gif(self, dst, padding_characters="", limit=800):
-        if (not self._font_a.size or not self._font_b.size) and ("cbdt" in dst):
-            dstDir = dst.replace("cbdt_glyphs_modified.gif", "")
-
+    def to_cbdt_gif(self, dst):
             font_a_images = read_cbdt(self._font_a.ttfont)
             font_b_images = read_cbdt(self._font_b.ttfont)
 
@@ -301,16 +297,18 @@ class DiffTable(Tbl):
                 key_before = element["glyph before"]
                 key_after = element["glyph after"]
 
-                font_a_images[key_before].save(f"{dstDir}{key_before}.gif",
+                font_a_images[key_before].save(f"{dst}{key_before}.gif",
                                                save_all=True,
                                                append_images=[font_b_images[key_after]],
                                                duration=1000,
                                                loop=10000)
 
-            logger.info(f"images are stored in: {dstDir}")
+            logger.info(f"images are stored in: {dst}")
             return
 
-        elif not self._font_a.size or not self._font_b.size:
+
+    def to_gif(self, dst, padding_characters="", limit=800):
+        if not self._font_a.size or not self._font_b.size:
             logger.info(f"Font can't be resized, can’t generate {dst.split('/')[-1]}")
             return
 
@@ -332,6 +330,7 @@ class DiffTable(Tbl):
             loop=10000,
             duration=1000
         )
+
 
 class DFontTable(Tbl):
 

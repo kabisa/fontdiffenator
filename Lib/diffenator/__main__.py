@@ -86,6 +86,8 @@ def main():
                         help="Ignore modified glyphs under this value")
     parser.add_argument('--metrics_thresh', type=int, default=0,
                         help="Ignore modified metrics under this value")
+    parser.add_argument('--cbdt_thresh', type=float, default=0,
+                        help="Ignore modified CBDT glyphs under this value")
     parser.add_argument('-rd', '--render_diffs', action='store_true',
                         help=("Render glyphs with hb-view and compare "
                               "pixel diffs."))
@@ -102,6 +104,7 @@ def main():
             kerns_thresh=args.kerns_thresh,
             glyphs_thresh=args.glyphs_thresh,
             metrics_thresh=args.metrics_thresh,
+            cbdt_thresh=args.cbdt_thresh,
             to_diff=args.to_diff,
             render_diffs=args.render_diffs
     )

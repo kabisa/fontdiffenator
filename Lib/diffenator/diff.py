@@ -17,12 +17,11 @@ Module to diff fonts.
 from __future__ import print_function
 import collections
 from diffenator import DiffTable, TXTFormatter, MDFormatter, HTMLFormatter
-import functools
 import os
 import time
 import logging
 from PIL import Image
-import io
+from . import read_cbdt
 
 
 __all__ = ['DiffFonts', 'diff_metrics', 'diff_kerning',
@@ -125,6 +124,8 @@ class DiffFonts:
                 img_path = os.path.join(dst, filename)
                 if table == "metrics":
                     _table.to_gif(img_path, padding_characters="II", limit=limit)
+                elif table == "cbdt":
+                    _table.to_cbdt_gif(dst)
                 else:
                     _table.to_gif(img_path, limit=limit)
 
@@ -818,13 +819,3 @@ def diff_cbdt_glyphs(font_before, font_after, thresh=4):
     return {
         "modified": modified
     }
-
-
-def read_cbdt(ttfont):
-    cbdt_glyphs = {}
-    if ttfont.has_key("CBDT"):
-        cbdt = ttfont["CBDT"]
-        for strike_data in cbdt.strikeData:
-            for key, data in strike_data.items():
-                cbdt_glyphs[key] = Image.open(io.BytesIO(data.imageData)).convert("RGBA")
-    return cbdt_glyphs

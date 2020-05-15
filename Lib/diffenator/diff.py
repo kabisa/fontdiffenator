@@ -64,6 +64,8 @@ class DiffFonts:
         cbdt_thresh=0,
         to_diff=["*"],
         render_diffs=False,
+        render_path=False,
+        html_output=False
     )
     def __init__(self, font_before, font_after, settings=None):
         self.font_before = font_before
@@ -155,10 +157,12 @@ class DiffFonts:
                 elif r_type == "md":
                     reports.append(current_table.to_md(limit=limit))
                 elif r_type == "html":
-                    if image_dir and current_table.renderable:
+                    has_size = self.font_before.size and self.font_after.size
+                    if image_dir and current_table.renderable and has_size:
                         image = os.path.join(image_dir, "%s_%s.gif" % (table, subtable))
                         reports.append(current_table.to_html(limit=limit,
                                        image=image))
+
                     else:
                         reports.append(current_table.to_html(limit=limit))
 
@@ -205,12 +209,14 @@ class DiffFonts:
             thresh=threshold
         )
 
-    def cbdt(self, threshold=None):
-        if not threshold:
+    def cbdt(self, threshold=None, rendering=None, html_output=None):
+        if not threshold or not rendering:
             threshold = self._settings["cbdt_thresh"]
+            rendering = self._settings["render_path"] is not None
+            html_output = self._settings["html_output"]
         self._data["cbdt"] = diff_cbdt_glyphs(
             self.font_before, self.font_after,
-            thresh=threshold
+            thresh=threshold, rendering=rendering, html_output=html_output
         )
 
     def metrics(self, threshold=None):
@@ -779,7 +785,7 @@ def _modified_marks(marks_before, marks_after, thresh=4,
 
 
 @timer
-def diff_cbdt_glyphs(font_before, font_after, thresh=4):
+def diff_cbdt_glyphs(font_before, font_after, thresh=4, rendering=False, html_output=False):
     cbdt_before = read_cbdt(font_before.ttfont)
     cbdt_after = read_cbdt(font_after.ttfont)
 
@@ -793,15 +799,27 @@ def diff_cbdt_glyphs(font_before, font_after, thresh=4):
         if glyph_name_before in cbdt_before and glyph_name_after in cbdt_after:
             diff = _diff_images(cbdt_before[glyph_name_before], cbdt_after[glyph_name_after])
             if diff > thresh:
-                modified.append({
-                    "glyph before": glyph_name_before,
-                    "glyph after": glyph_name_after,
-                    "string": char,
-                    "diff": diff
-                })
+                if rendering and html_output:
+                    modified.append({
+                        "glyph before": glyph_name_before,
+                        "glyph after": glyph_name_after,
+                        "string": char,
+                        "diff": diff,
+                        "image": f"<img src='./blaat/{glyph_name_before}.gif'>"
+                    })
+                else:
+                    modified.append({
+                        "glyph before": glyph_name_before,
+                        "glyph after": glyph_name_after,
+                        "string": char,
+                        "diff": diff,
+                    })
 
     modified = DiffTable("cbdt glyphs modified", font_before, font_after, data=modified, renderable=True)
-    modified.report_columns(["glyph before", "glyph after", "diff", "string"])
+    if rendering and html_output:
+        modified.report_columns(["glyph before", "glyph after", "diff", "string", "image"])
+    else:
+        modified.report_columns(["glyph before", "glyph after", "diff", "string"])
     modified.sort(key=lambda k: abs(k["diff"]), reverse=True)
 
     return {

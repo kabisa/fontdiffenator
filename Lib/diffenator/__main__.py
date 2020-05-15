@@ -106,7 +106,9 @@ def main():
             metrics_thresh=args.metrics_thresh,
             cbdt_thresh=args.cbdt_thresh,
             to_diff=args.to_diff,
-            render_diffs=args.render_diffs
+            render_diffs=args.render_diffs,
+            render_path=args.render_path,
+            html_output=args.html,
     )
     font_before = DFont(args.font_before)
     font_after = DFont(args.font_after)

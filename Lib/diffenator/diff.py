@@ -70,6 +70,7 @@ class DiffFonts:
     def __init__(self, font_before, font_after, settings=None):
         self.font_before = font_before
         self.font_after = font_after
+        self.renderable = font_after.ftfont.is_scalable and font_before.ftfont.is_scalable
         self._data = collections.defaultdict(dict)
         self._settings = self.SETTINGS
         if settings:
@@ -114,6 +115,10 @@ class DiffFonts:
 
     def to_gifs(self, dst, limit=800):
         """output before and after gifs for table"""
+        if not self.renderable:
+            logger.info(f"One or more font can't be resized, can’t generate before/after GIFs")
+            return
+
         if not os.path.isdir(dst):
             os.mkdir(dst)
 
@@ -157,8 +162,7 @@ class DiffFonts:
                 elif r_type == "md":
                     reports.append(current_table.to_md(limit=limit))
                 elif r_type == "html":
-                    has_size = self.font_before.size and self.font_after.size
-                    if image_dir and current_table.renderable and has_size:
+                    if image_dir and self.renderable and current_table.renderable:
                         image = os.path.join(image_dir, "%s_%s.gif" % (table, subtable))
                         reports.append(current_table.to_html(limit=limit,
                                        image=image))

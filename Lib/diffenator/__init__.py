@@ -316,10 +316,6 @@ class DiffTable(Tbl):
             )
 
     def to_gif(self, dst, padding_characters="", limit=800):
-        if not self._font_a.size or not self._font_b.size:
-            logger.info(f"Font can't be resized, can’t generate {dst.split('/')[-1]}")
-            return
-
         tab_width = max(self._tab_width(self._font_a),
                         self._tab_width(self._font_b))
         img_a = self._to_png(self._font_a, "Before",

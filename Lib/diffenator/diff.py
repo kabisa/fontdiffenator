@@ -166,7 +166,6 @@ class DiffFonts:
                         image = os.path.join(image_dir, "%s_%s.gif" % (table, subtable))
                         reports.append(current_table.to_html(limit=limit,
                                        image=image))
-
                     else:
                         reports.append(current_table.to_html(limit=limit))
 

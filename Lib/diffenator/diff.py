@@ -17,11 +17,11 @@ Module to diff fonts.
 from __future__ import print_function
 import collections
 from diffenator import DiffTable, TXTFormatter, MDFormatter, HTMLFormatter
-import functools
 import os
 import time
 import logging
 from PIL import Image
+from . import read_cbdt
 
 
 __all__ = ['DiffFonts', 'diff_metrics', 'diff_kerning',
@@ -54,13 +54,14 @@ class DiffFonts:
     font_after: DFont
     settings: dict
     """
-    
+
     SETTINGS = dict(
         glyphs_thresh=0,
         marks_thresh=0,
         mkmks_thresh=0,
         metrics_thresh=0,
         kerns_thresh=0,
+        cbdt_thresh=0,
         to_diff=["*"],
         render_diffs=False,
     )
@@ -92,6 +93,8 @@ class DiffFonts:
                 self.marks(self._settings["marks_thresh"])
             if "mkmks" in self._settings["to_diff"]:
                 self.mkmks(self._settings["mkmks_thresh"])
+            if "cbdt" in self._settings["to_diff"]:
+                self.cbdt(self._settings["cbdt_thresh"])
 
     def run_all_diffs(self):
         self.names()
@@ -101,6 +104,7 @@ class DiffFonts:
         self.metrics(self._settings["metrics_thresh"])
         self.marks(self._settings["marks_thresh"])
         self.mkmks(self._settings["mkmks_thresh"])
+        self.cbdt(self._settings["cbdt_thresh"])
 
     def to_dict(self):
         serialised_data = self._serialise()
@@ -120,6 +124,8 @@ class DiffFonts:
                 img_path = os.path.join(dst, filename)
                 if table == "metrics":
                     _table.to_gif(img_path, padding_characters="II", limit=limit)
+                elif table == "cbdt":
+                    _table.to_cbdt_gif(dst)
                 else:
                     _table.to_gif(img_path, limit=limit)
 
@@ -196,6 +202,14 @@ class DiffFonts:
             self.font_before, self.font_after,
             self.font_before.mkmks, self.font_after.mkmks,
             name="mkmks",
+            thresh=threshold
+        )
+
+    def cbdt(self, threshold=None):
+        if not threshold:
+            threshold = self._settings["cbdt_thresh"]
+        self._data["cbdt"] = diff_cbdt_glyphs(
+            self.font_before, self.font_after,
             thresh=threshold
         )
 
@@ -328,7 +342,7 @@ def diff_glyphs(font_before, font_after,
     new = _subtract_items(glyphs_after_h, glyphs_before_h)
     modified = _modified_glyphs(glyphs_before_h, glyphs_after_h, thresh,
                                 scale_upms=scale_upms, render_diffs=render_diffs)
-    
+
     new = DiffTable("glyphs new", font_before, font_after, data=new, renderable=True)
     new.report_columns(["glyph", "area", "string"])
     new.sort(key=lambda k: k["glyph"].name)
@@ -498,14 +512,14 @@ def diff_kerning(font_before, font_after, thresh=2, scale_upms=True):
     new = DiffTable("kerns new", font_before, font_after, data=new, renderable=True)
     new.report_columns(["left", "right", "value", "string"])
     new.sort(key=lambda k: abs(k["value"]), reverse=True)
-    
+
     modified = DiffTable("kerns modified", font_before, font_after, data=modified, renderable=True)
     modified.report_columns(["left", "right", "diff", "string"])
     modified.sort(key=lambda k: abs(k["diff"]), reverse=True)
     return {
         'new': new,
         'missing': missing,
-        'modified': modified, 
+        'modified': modified,
     }
 
 
@@ -569,7 +583,7 @@ def diff_metrics(font_before, font_after, thresh=1, scale_upms=True):
     modified.report_columns(["glyph", "diff_adv"])
     modified.sort(key=lambda k: k["diff_adv"], reverse=True)
     return {
-            'modified': modified 
+            'modified': modified
             }
 
 
@@ -737,6 +751,7 @@ def diff_marks(font_before, font_after, marks_before, marks_after,
                          renderable=True)
     modified.report_columns(["base_glyph", "mark_glyph", "diff_x", "diff_y"])
     modified.sort(key=lambda k: abs(k["diff_x"]) + abs(k["diff_y"]), reverse=True)
+
     return {
         "new": new,
         "missing": missing,
@@ -774,3 +789,33 @@ def _modified_marks(marks_before, marks_after, thresh=4,
             table.append(mark)
     return table
 
+
+@timer
+def diff_cbdt_glyphs(font_before, font_after, thresh=4):
+    cbdt_before = read_cbdt(font_before.ttfont)
+    cbdt_after = read_cbdt(font_after.ttfont)
+
+    chars_before = {r["string"]: str(r["glyph"]) for r in font_before.glyphs}
+    chars_after = {r["string"]: str(r["glyph"]) for r in font_after.glyphs}
+
+    modified = []
+    for char in set(chars_before) & set(chars_after):
+        glyph_name_before = chars_before[char]
+        glyph_name_after = chars_after[char]
+        if glyph_name_before in cbdt_before and glyph_name_after in cbdt_after:
+            diff = _diff_images(cbdt_before[glyph_name_before], cbdt_after[glyph_name_after])
+            if diff > thresh:
+                modified.append({
+                    "glyph before": glyph_name_before,
+                    "glyph after": glyph_name_after,
+                    "string": char,
+                    "diff": diff
+                })
+
+    modified = DiffTable("cbdt glyphs modified", font_before, font_after, data=modified, renderable=True)
+    modified.report_columns(["glyph before", "glyph after", "diff", "string"])
+    modified.sort(key=lambda k: abs(k["diff"]), reverse=True)
+
+    return {
+        "modified": modified
+    }

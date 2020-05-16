@@ -115,9 +115,6 @@ class DiffFonts:
 
     def to_gifs(self, dst, limit=800):
         """output before and after gifs for table"""
-        if not self.renderable:
-            logger.info(f"One or more font can't be resized, can’t generate before/after GIFs")
-            return
 
         if not os.path.isdir(dst):
             os.mkdir(dst)
@@ -125,15 +122,15 @@ class DiffFonts:
         for table in self._data:
             for subtable in self._data[table]:
                 _table = self._data[table][subtable]
-                if not _table.renderable or len(_table) < 1:
+                if (not _table.renderable or len(_table) < 1) and table is not "cbdt":
                     continue
                 filename = _table.table_name.replace(" ", "_") + ".gif"
                 img_path = os.path.join(dst, filename)
-                if table == "metrics":
+                if table == "metrics" and self.renderable:
                     _table.to_gif(img_path, padding_characters="II", limit=limit)
                 elif table == "cbdt":
                     _table.to_cbdt_gif(dst)
-                else:
+                elif self.renderable:
                     _table.to_gif(img_path, limit=limit)
 
     def _to_report(self, limit=50, dst=None, r_type="txt", image_dir=None):
@@ -212,15 +209,18 @@ class DiffFonts:
             thresh=threshold
         )
 
-    def cbdt(self, threshold=None, rendering=None, html_output=None):
-        if not threshold or not rendering:
+    def cbdt(self, threshold=None, render_path=None, html_output=None):
+        if not threshold:
             threshold = self._settings["cbdt_thresh"]
-            rendering = self._settings["render_path"] is not None
+        if not render_path:
+            render_path = self._settings["render_path"]
+        if not html_output:
             html_output = self._settings["html_output"]
-        self._data["cbdt"] = diff_cbdt_glyphs(
-            self.font_before, self.font_after,
-            thresh=threshold, rendering=rendering, html_output=html_output
-        )
+        if not self.renderable:
+            self._data["cbdt"] = diff_cbdt_glyphs(
+                self.font_before, self.font_after,
+                thresh=threshold, render_path=render_path, html_output=html_output
+            )
 
     def metrics(self, threshold=None):
         if not threshold:
@@ -788,7 +788,7 @@ def _modified_marks(marks_before, marks_after, thresh=4,
 
 
 @timer
-def diff_cbdt_glyphs(font_before, font_after, thresh=4, rendering=False, html_output=False):
+def diff_cbdt_glyphs(font_before, font_after, thresh=4, render_path=None, html_output=False):
     cbdt_before = read_cbdt(font_before.ttfont)
     cbdt_after = read_cbdt(font_after.ttfont)
 
@@ -802,24 +802,16 @@ def diff_cbdt_glyphs(font_before, font_after, thresh=4, rendering=False, html_ou
         if glyph_name_before in cbdt_before and glyph_name_after in cbdt_after:
             diff = _diff_images(cbdt_before[glyph_name_before], cbdt_after[glyph_name_after])
             if diff > thresh:
-                if rendering and html_output:
-                    modified.append({
-                        "glyph before": glyph_name_before,
-                        "glyph after": glyph_name_after,
-                        "string": char,
-                        "diff": diff,
-                        "image": f"<img src='./blaat/{glyph_name_before}.gif'>"
-                    })
-                else:
-                    modified.append({
-                        "glyph before": glyph_name_before,
-                        "glyph after": glyph_name_after,
-                        "string": char,
-                        "diff": diff,
-                    })
+                modified.append({
+                    "glyph before": glyph_name_before,
+                    "glyph after": glyph_name_after,
+                    "string": char,
+                    "diff": diff,
+                    "image": f"<img src='{render_path}/{glyph_name_before}.gif'>",
+                })
 
     modified = DiffTable("cbdt glyphs modified", font_before, font_after, data=modified, renderable=True)
-    if rendering and html_output:
+    if render_path and html_output:
         modified.report_columns(["glyph before", "glyph after", "diff", "string", "image"])
     else:
         modified.report_columns(["glyph before", "glyph after", "diff", "string"])

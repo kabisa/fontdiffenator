@@ -115,14 +115,13 @@ class DiffFonts:
 
     def to_gifs(self, dst, limit=800):
         """output before and after gifs for table"""
-
         if not os.path.isdir(dst):
             os.mkdir(dst)
 
         for table in self._data:
             for subtable in self._data[table]:
                 _table = self._data[table][subtable]
-                if (not _table.renderable or len(_table) < 1) and table is not "cbdt":
+                if (not _table.renderable and table is not "cbdt") or len(_table) < 1:
                     continue
                 filename = _table.table_name.replace(" ", "_") + ".gif"
                 img_path = os.path.join(dst, filename)

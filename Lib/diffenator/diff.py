@@ -215,11 +215,10 @@ class DiffFonts:
             render_path = self._settings["render_path"]
         if not html_output:
             html_output = self._settings["html_output"]
-        if not self.renderable:
-            self._data["cbdt"] = diff_cbdt_glyphs(
-                self.font_before, self.font_after,
-                thresh=threshold, render_path=render_path, html_output=html_output
-            )
+        self._data["cbdt"] = diff_cbdt_glyphs(
+            self.font_before, self.font_after,
+            thresh=threshold, render_path=render_path, html_output=html_output
+        )
 
     def metrics(self, threshold=None):
         if not threshold:

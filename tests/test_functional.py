@@ -66,7 +66,7 @@ class TestFunctionality(unittest.TestCase):
         self.assertNotEqual(cmd, None)
 
     def test_cbdt_dump(self):
-        font_path = os.path.join(self._path, 'data', 'cbdt_test', 'NotoColorEmoji.ttf')
+        font_path = os.path.join(self._path, 'data', 'cbdt_test', 'NotoColorEmoji-u11-u1F349.ttf')
         for category in CHOICES:
             cmd = subprocess.check_output([
                 "dumper",
